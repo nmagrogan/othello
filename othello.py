@@ -11,22 +11,24 @@ making moves in othello
 
 import copy
 import time
+import math
 
 #some constants
 VALID_COLUMN = ["a","b","c","d","e","f","g","h"]
 VALID_ROW = [1,2,3,4,5,6,7,8]
 VALID_ROW_CHAR = ["1","2","3","4","5","6","7","8"]
+MAX_LEVEL = 5
 
 BOARD_A = [["X","a","b","c","d","e","f","g","h","X"],
-              ["1","_","_","_","_","_","_","_","_","X"],
-              ["2","_","_","_","_","_","_","_","_","X"],
-              ["3","_","_","_","_","_","_","_","_","X"],
-              ["4","_","_","_","W","B","_","_","_","X"],
-              ["5","_","_","_","B","W","_","_","_","X"],
-              ["6","_","_","_","_","_","_","_","_","X"],
-              ["7","_","_","_","_","_","_","_","_","X"],
-              ["8","_","_","_","_","_","_","_","_","X"],
-              ["X","X","X","X","X","X","X","X","X","X"]]
+           ["1","_","_","_","_","_","_","_","_","X"],
+           ["2","_","_","_","_","_","_","_","_","X"],
+           ["3","_","_","_","_","_","_","_","_","X"],
+           ["4","_","_","_","W","B","_","_","_","X"],
+           ["5","_","_","_","B","W","_","_","_","X"],
+           ["6","_","_","_","_","_","_","_","_","X"],
+           ["7","_","_","_","_","_","_","_","_","X"],
+           ["8","_","_","_","_","_","_","_","_","X"],
+           ["X","X","X","X","X","X","X","X","X","X"]]
 
 BOARD_B = [["X","a","b","c","d","e","f","g","h","X"],
               ["1","_","_","_","_","_","_","_","_","X"],
@@ -75,9 +77,6 @@ class Othello:
 
     #returns all adjacent tiles given a positon
     def get_adj_tiles(self,number_pos,letter_pos_int):
-
-
-
         adjacent_tiles = [self.board[number_pos+1][letter_pos_int], #below
                           self.board[number_pos-1][letter_pos_int], #above
                           self.board[number_pos][letter_pos_int+1], #right
@@ -86,8 +85,6 @@ class Othello:
                           self.board[number_pos+1][letter_pos_int-1], #below left
                           self.board[number_pos-1][letter_pos_int+1], #up right
                           self.board[number_pos-1][letter_pos_int-1]] #up left
-
-
         return adjacent_tiles
 
 
@@ -175,7 +172,6 @@ class Othello:
         for i in range(len(adjacent_tiles)):
             if adjacent_tiles[i] == opposite_name:
                 if i == 0:
-                    print "hello"
                     for l in range(number_pos+1,9,1):
                         if self.board[l][letter_pos] == player_name:
                             if l == 8 or self.board[l+1][letter_pos] == "_" or self.board[l+1][letter_pos] == opposite_name:
@@ -390,18 +386,9 @@ class Othello:
                         if self.board[number_pos-j][letter_pos-j] == "$":
                             self.board[number_pos-j][letter_pos-j] = player_name
 
-
-
-
-
-
-
-
-
-
     #runs through a single turn for a player
     def player_turn(self,player_name,old_board_config,old_score):
-
+        #gendrates legal moves, returns 1 if no legal moves
         legal_moves = self.generate_next_moves(player_name)
         if legal_moves == []:
             print "No valid moves"
@@ -410,56 +397,223 @@ class Othello:
         #initial input
         letter_pos, number_pos = self.input_pos(player_name)
         letter_pos_int = VALID_COLUMN.index(letter_pos)+1
-
-        #checks if initial input was in a valid position, if not it wil
-        #request a new input till a valid one is given
-
-        #print legal_moves
-
         move = (number_pos,letter_pos_int)
 
+        #check input is in legal moves
         while move not in legal_moves:
             print "Invalid move, try agian"
             letter_pos,number_pos = self.input_pos(player_name)
             letter_pos_int = VALID_COLUMN.index(letter_pos)+1
             move = (number_pos,letter_pos_int)
 
+        #puts tile on board
+        self.board[number_pos][VALID_COLUMN.index(letter_pos)+1] = player_name
 
-
-
+        #increment score for the tile that was placed
         if player_name == "B":
             self.score[0] = self.score[0]+1
         else:
             self.score[1] = self.score[1]+1
 
-        #puts tile on board
-        self.board[number_pos][VALID_COLUMN.index(letter_pos)+1] = player_name
-        #flips whatever other tiles need to be flipped and changes score
+        #highlights tiles to be flipped, and increases score
         flip_helper,flip_helper2 = self.flip_tiles(number_pos,letter_pos_int,player_name,old_board_config,old_score)
 
         self.display_board()
+
         good_move = raw_input("Was this move done correctly? (y/n) ")
         while good_move not in ["y","n"]:
             good_move = raw_input("(y/n) ")
 
-        if good_move == "n":
+        #if move wasn't done correctly go back and reinput
+        while good_move == "n":
             print "move not done correctly "
-            self.board = old_board_config
-            self.score = old_score
+            self.board = copy.deepcopy(old_board_config)
+            self.score = copy.deepcopy(old_score)
             self.display_board()
-            exit()
 
+            letter_pos, number_pos = self.input_pos(player_name)
+            letter_pos_int = VALID_COLUMN.index(letter_pos)+1
+
+            move = (number_pos,letter_pos_int)
+
+            while move not in legal_moves:
+                print "Invalid move, try agian"
+                letter_pos,number_pos = self.input_pos(player_name)
+                letter_pos_int = VALID_COLUMN.index(letter_pos)+1
+                move = (number_pos,letter_pos_int)
+
+
+            #puts tile on board
+            self.board[number_pos][VALID_COLUMN.index(letter_pos)+1] = player_name
+            #increment score for the tile that was placed
+            if player_name == "B":
+                self.score[0] = self.score[0]+1
+            else:
+                self.score[1] = self.score[1]+1
+
+            #flips whatever other tiles need to be flipped and changes score
+            flip_helper,flip_helper2 = self.flip_tiles(number_pos,letter_pos_int,player_name,old_board_config,old_score)
+
+            self.display_board()
+
+            good_move = raw_input("Was this move done correctly? (y/n) ")
+            while good_move not in ["y","n"]:
+                good_move = raw_input("(y/n) ")
+
+        #finishes flip by flipping highlighted tiles
         self.flip2(number_pos,letter_pos_int,player_name,flip_helper,flip_helper2)
 
         return 0
+###################################################################################################
+#start of adding in ab pruning
+
+    def maxVal(graph,node,alpha,beta,level):
+        print node
+        level = level + 1
+        if isinstance(node,int):
+            return node
+        if int(level) > int(DEPTH_BOUND):
+            return ord(node)
+        v = float("-inf")
+        for child in graph.get(node):
+            v1 = minVal(graph,child,alpha,beta,level)
+            if v is None or v1 > v:
+                v = v1
+            if beta is not None:
+                if v1 >= beta:
+                    return v
+            if alpha is None or v1 > alpha:
+                alpha = v1
+        return v
+
+    def minVal(graph,node,alpha,beta,level):
+        print node
+        level = level + 1
+        if isinstance(node,int):
+            return node
+        if int(level) > int(DEPTH_BOUND):
+            return ord(node)
+        v = float("inf")
+        for child in graph.get(node):
+            v1 = maxVal(graph,child,alpha,beta,level)
+            if v is None or v1 < v:
+                v = v1
+            if alpha is not None:
+                if v1 <= alpha:
+                    return v
+            if beta is None or v1 < beta:
+                beta = v1
+        return v
+
+    def heuristic(self,player_name,board,level):
+        # high value = good
+
+        if player_name == "B":
+            heuristic_val = board.score[0]
+        else:
+            heuristic_val = board.score[1]
+
+        #subtracting for level, because higher level = bad
+        #heuristic_val = heuristic_val - (2**level)
+
+        #checking corner spots, really want corner spots
+        if board.board[1][1] == player_name:
+            heuristic_val = heuristic_val + 100
+        if board.board[1][8] == player_name:
+            heuristic_val = heuristic_val + 100
+        if board.board[8][1] == player_name:
+            heuristic_val = heuristic_val + 100
+        if board.board[8][8] == player_name:
+            heuristic_val = heuristic_val + 100
+
+        #maybe add checking
+        return heuristic_val
+
+    def generate_next_board(self,player_name,next_moves,board_state):
+        next_boards = []
 
 
+
+        for move in next_moves:
+            temp_board = copy.deepcopy(board_state)
+            #old stuff dosnt matter, dont use it in this implementation
+            old_score = 0
+            old_board_config = 0
+
+            flip_helper,flip_helper2 = temp_board.flip_tiles(move[0],move[1],player_name,old_board_config,old_score)
+            temp_board.flip2(move[0],move[1],player_name,flip_helper,flip_helper2)
+            next_boards.append(temp_board)
+
+
+        return next_boards
+
+    def get_scores(self,player_name,next_boards,level):
+        scores = []
+        for board in next_boards:
+            scores.append(self.heuristic(player_name,board,level))
+
+        return scores
+
+    def make_graph(self,player_name,board,score):
+        scores = []
+        next_moves = []
+        temp_board = copy.deepcopy(self)
+
+
+        if player_name == "B":
+            opposite_name = "W"
+        else:
+            opposite_name = "B"
+
+        next_moves.append(temp_board.generate_next_moves(player_name))
+
+        next_boards = self.generate_next_board(player_name, next_moves[0],temp_board)
+
+        for board in next_boards:
+            board.display_board()
+
+        scores.append(self.get_scores(player_name,next_boards,1))
+
+        #for board in next_boards:
+        #    next_moves.append(board.generate_next_moves(player_name))
+
+        print next_moves
+        print scores
+        exit()
+        return graph
+
+
+
+    def abprune(self,player_name):
+
+        graph = self.make_graph(player_name,self.board,self.score)
+
+        if player_name == "B":
+            maxVal(graph,root,alpha,beta,level)
+        else:
+            minVal(graph,root,alpha,beta,level)
+
+
+
+        return number_pos, letter_pos
+
+# end of AI code
+##################################################################################################
+    def display_board2(self,board_state):
+        for row in board_state.board:
+            print(row)
+        print "Score B = " + str(board_state.score[0])
+        print "Score W = " + str(board_state.score[1])
+        print("")
 
 def main():
 
     game = Othello()
 
-    game.display_board()
+    #game.display_board()
+
+    game.abprune("B")
+    exit()
 
     change_board = raw_input("Would you like to change board config (y/n): " )
     if change_board == "y":
