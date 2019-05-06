@@ -582,6 +582,27 @@ class Othello:
         exit()
         return graph
 
+    def simple_best_first(self, player_name):
+        scores = []
+        next_moves = []
+        temp_board = copy.deepcopy(self)
+
+        if player_name == "B":
+            opposite_name = "W"
+        else:
+            opposite_name = "B"
+
+        next_moves = temp_board.generate_next_moves(player_name)
+
+        next_boards = self.generate_next_board(player_name, next_moves,temp_board)
+
+        scores = self.get_scores(player_name,next_boards,1)
+
+        next_move_idx = scores.index(min(scores))
+        move = next_moves[next_move_idx]
+
+        return move
+
 
 
     def abprune(self,player_name):
@@ -599,21 +620,13 @@ class Othello:
 
 # end of AI code
 ##################################################################################################
-    def display_board2(self,board_state):
-        for row in board_state.board:
-            print(row)
-        print "Score B = " + str(board_state.score[0])
-        print "Score W = " + str(board_state.score[1])
-        print("")
 
 def main():
 
     game = Othello()
 
-    #game.display_board()
+    game.display_board()
 
-    game.abprune("B")
-    exit()
 
     change_board = raw_input("Would you like to change board config (y/n): " )
     if change_board == "y":
@@ -638,8 +651,11 @@ def main():
             old_score = copy.deepcopy(game.score)
 
             start = time.time()
-            print "This is where AI would return (Letter,Number) of next move"
+            next_move = game.simple_best_first("B")
             end = time.time()
+            AI_letter = VALID_COLUMN[next_move[1]-1]
+            AI_number = next_move[0]
+            print "AI: I would like to move to " + AI_letter + str(AI_number)
             print "Time AI took : " + str(end - start) + " s"
 
             if end-start > 10:
@@ -689,8 +705,11 @@ def main():
             old_score = copy.deepcopy(game.score)
 
             start = time.time()
-            print "This is where AI would return (Letter,Number) of next move"
+            next_move = game.simple_best_first("W")
             end = time.time()
+            AI_letter = VALID_COLUMN[next_move[1]-1]
+            AI_number = next_move[0]
+            print "AI: I would like to move to " + AI_letter + str(AI_number)
             print "Time AI took : " + str(end - start) + " s"
 
             if end-start > 10:
