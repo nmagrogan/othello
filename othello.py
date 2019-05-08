@@ -555,8 +555,7 @@ class Othello:
         return scores
 
     def make_graph(self,player_name,board,score):
-        scores = []
-        next_moves = []
+
         temp_board = copy.deepcopy(self)
 
 
@@ -565,20 +564,33 @@ class Othello:
         else:
             opposite_name = "B"
 
-        next_moves.append(temp_board.generate_next_moves(player_name))
+        moves = temp_board.generate_next_moves(player_name)
 
-        next_boards = self.generate_next_board(player_name, next_moves[0],temp_board)
-
-        for board in next_boards:
-            board.display_board()
-
-        scores.append(self.get_scores(player_name,next_boards,1))
+        boards = self.generate_next_board(player_name, moves,temp_board)
 
         #for board in next_boards:
-        #    next_moves.append(board.generate_next_moves(player_name))
+            #board.display_board()
 
-        print next_moves
-        print scores
+        scores = self.get_scores(player_name,boards,1)
+
+
+
+
+        graph = {
+            "S" : [0,moves],
+        }
+
+        for i in range(len(moves)):
+            next_moves = boards[i].generate_next_moves(opposite_name)
+            next_boards = self.generate_next_board(opposite_name,next_moves,boards[i])
+            #scores =self.get_scores(opposite_name,boards,2)
+
+            graph[moves[i]] = [scores[i],next_moves]
+
+
+        print graph
+        #print next_moves
+        #print scores
         exit()
         return graph
 
@@ -626,6 +638,9 @@ def main():
     game = Othello()
 
     game.display_board()
+
+    game.abprune("B")
+    exit()
 
 
     change_board = raw_input("Would you like to change board config (y/n): " )
