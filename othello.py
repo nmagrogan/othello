@@ -467,43 +467,6 @@ class Othello:
 ###################################################################################################
 #start of adding in ab pruning
 
-    def maxVal(graph,node,alpha,beta,level):
-        print node
-        level = level + 1
-        if isinstance(node,int):
-            return node
-        if int(level) > int(DEPTH_BOUND):
-            return ord(node)
-        v = float("-inf")
-        for child in graph.get(node):
-            v1 = minVal(graph,child,alpha,beta,level)
-            if v is None or v1 > v:
-                v = v1
-            if beta is not None:
-                if v1 >= beta:
-                    return v
-            if alpha is None or v1 > alpha:
-                alpha = v1
-        return v
-
-    def minVal(graph,node,alpha,beta,level):
-        print node
-        level = level + 1
-        if isinstance(node,int):
-            return node
-        if int(level) > int(DEPTH_BOUND):
-            return ord(node)
-        v = float("inf")
-        for child in graph.get(node):
-            v1 = maxVal(graph,child,alpha,beta,level)
-            if v is None or v1 < v:
-                v = v1
-            if alpha is not None:
-                if v1 <= alpha:
-                    return v
-            if beta is None or v1 < beta:
-                beta = v1
-        return v
 
     def heuristic(self,player_name,board,level):
         # high value = good
@@ -514,7 +477,7 @@ class Othello:
             heuristic_val = board.score[1]
 
         #subtracting for level, because higher level = bad
-        #heuristic_val = heuristic_val - (2**level)
+        heuristic_val = heuristic_val - level
 
         #checking corner spots, really want corner spots
         if board.board[1][1] == player_name:
@@ -540,8 +503,18 @@ class Othello:
             old_score = 0
             old_board_config = 0
 
+            #increment score for the tile that was placed
+            if player_name == "B":
+                temp_board.score[0] = temp_board.score[0]+1
+            else:
+                temp_board.score[1] = temp_board.score[1]+1
+
+
             flip_helper,flip_helper2 = temp_board.flip_tiles(move[0],move[1],player_name,old_board_config,old_score)
             temp_board.flip2(move[0],move[1],player_name,flip_helper,flip_helper2)
+            #print "'''''''''"
+            #temp_board.display_board()
+            #print "'''''''''"
             next_boards.append(temp_board)
 
 
@@ -554,49 +527,96 @@ class Othello:
 
         return scores
 
-    def make_graph(self,player_name,board,score):
 
-        temp_board = copy.deepcopy(self)
-
+    def best_first(self,player_name):
+        move = (0,0)
 
         if player_name == "B":
             opposite_name = "W"
         else:
             opposite_name = "B"
 
-        moves = temp_board.generate_next_moves(player_name)
+        start = copy.deepcopy(self)
+        open_lst = [] #priority queue
+        closed = []
+        children = []
+        state_level = []
+        loop = 0
+        DEPTH_BOUND = 5
+        cur_player = player_name
 
-        boards = self.generate_next_board(player_name, moves,temp_board)
+        open_lst.append((self.heuristic(player_name,start,0),start,player_name))
+        state_level.append((self.heuristic(player_name,start,0),0))
 
-        #for board in next_boards:
-            #board.display_board()
-
-        scores = self.get_scores(player_name,boards,1)
-
-
-
-
-        graph = {
-            "S" : [0,moves],
-        }
-
-        for i in range(len(moves)):
-            next_moves = boards[i].generate_next_moves(opposite_name)
-            next_boards = self.generate_next_board(opposite_name,next_moves,boards[i])
-            #scores =self.get_scores(opposite_name,boards,2)
-
-            graph[moves[i]] = [scores[i],next_moves]
+        while (open_lst):
+            print "-----------"
+            print loop
+            print "-------"
+            #if loop == 10:
+                #exit()
+            loop += 1
+            cur = open_lst.pop(0)
+            cur_level = state_level.pop(0)
+            #diplay for looking at traversal
+            cur[1].display_board()
 
 
-        print graph
-        #print next_moves
-        #print scores
-        exit()
-        return graph
+            #if cur == goal:
+                #return 1
+
+            if cur_level[1] < DEPTH_BOUND:
+                new_moves = cur[1].generate_next_moves(cur[2])
+                #print cur[2]
+                #print new_moves
+                #print cur
+                #print open_lst
+
+
+                if cur[2] == player_name:
+                    child_player = copy.copy(opposite_name)
+                else:
+                    child_player = copy.copy(player_name)
+
+                new_children = self.generate_next_board(cur[2], new_moves, cur[1])
+                #for children in new_children:
+                #    children.display_board()
+                #exit()
+                child_level = cur_level[1]+1
+
+                for new_child in new_children:
+                    if new_child not in open_lst or new_child not in closed:
+                        print "if 1"
+                        open_lst.append((self.heuristic(cur[2],new_child,child_level), new_child, child_player))
+                        state_level.append((self.heuristic(cur[2],new_child,child_level),child_level))
+
+                    elif new_child in open_lst:
+                        print "if 2"
+                        open_index = open_lst.index(new_child)
+                        old_level = state_level[open_index]
+                        if child_level < old_level[1]:
+                            open_lst[open_index] = ((self.heuristic(cur[2],new_child,child_level),new_child,child_player))
+                            state_level[open_index] = ((self.heuristic(cur[2],new_child,child_level),child_level))
+
+                    elif new_child in closed:
+                        print "if 3"
+                        closed_index = closed.index(new_child)
+                        old_level = state_level[closed_index]
+                        if child_level < old_level[1]:
+                            closed.pop(closed_index)
+                            open_lst.append((self.heuristic([cur[2]],new_child,child_level),new_child,child_player))
+                            state_level.append((self.heuristic(cur[2],new_child,child_level),child_level))
+
+                    closed.append(cur)
+
+                    open_lst.sort(reverse = True)
+                    state_level.sort(reverse = True)
+
+
+        return move
+
+
 
     def simple_best_first(self, player_name):
-        scores = []
-        next_moves = []
         temp_board = copy.deepcopy(self)
 
         if player_name == "B":
@@ -615,21 +635,6 @@ class Othello:
 
         return move
 
-
-
-    def abprune(self,player_name):
-
-        graph = self.make_graph(player_name,self.board,self.score)
-
-        if player_name == "B":
-            maxVal(graph,root,alpha,beta,level)
-        else:
-            minVal(graph,root,alpha,beta,level)
-
-
-
-        return number_pos, letter_pos
-
 # end of AI code
 ##################################################################################################
 
@@ -639,7 +644,7 @@ def main():
 
     game.display_board()
 
-    game.abprune("B")
+    game.best_first("B")
     exit()
 
 
