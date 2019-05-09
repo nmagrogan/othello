@@ -17,7 +17,7 @@ import math
 VALID_COLUMN = ["a","b","c","d","e","f","g","h"]
 VALID_ROW = [1,2,3,4,5,6,7,8]
 VALID_ROW_CHAR = ["1","2","3","4","5","6","7","8"]
-MAX_LEVEL = 5
+DEPTH_BOUND = 5
 
 BOARD_A = [["X","a","b","c","d","e","f","g","h","X"],
            ["1","_","_","_","_","_","_","_","_","X"],
@@ -468,6 +468,7 @@ class Othello:
 #start of adding in ab pruning
 
 
+
     def heuristic(self,player_name,board,level):
         # high value = good
 
@@ -503,18 +504,8 @@ class Othello:
             old_score = 0
             old_board_config = 0
 
-            #increment score for the tile that was placed
-            if player_name == "B":
-                temp_board.score[0] = temp_board.score[0]+1
-            else:
-                temp_board.score[1] = temp_board.score[1]+1
-
-
             flip_helper,flip_helper2 = temp_board.flip_tiles(move[0],move[1],player_name,old_board_config,old_score)
             temp_board.flip2(move[0],move[1],player_name,flip_helper,flip_helper2)
-            #print "'''''''''"
-            #temp_board.display_board()
-            #print "'''''''''"
             next_boards.append(temp_board)
 
 
@@ -528,95 +519,8 @@ class Othello:
         return scores
 
 
-    def best_first(self,player_name):
-        move = (0,0)
 
-        if player_name == "B":
-            opposite_name = "W"
-        else:
-            opposite_name = "B"
-
-        start = copy.deepcopy(self)
-        open_lst = [] #priority queue
-        closed = []
-        children = []
-        state_level = []
-        loop = 0
-        DEPTH_BOUND = 5
-        cur_player = player_name
-
-        open_lst.append((self.heuristic(player_name,start,0),start,player_name))
-        state_level.append((self.heuristic(player_name,start,0),0))
-
-        while (open_lst):
-            print "-----------"
-            print loop
-            print "-------"
-            #if loop == 10:
-                #exit()
-            loop += 1
-            cur = open_lst.pop(0)
-            cur_level = state_level.pop(0)
-            #diplay for looking at traversal
-            cur[1].display_board()
-
-
-            #if cur == goal:
-                #return 1
-
-            if cur_level[1] < DEPTH_BOUND:
-                new_moves = cur[1].generate_next_moves(cur[2])
-                #print cur[2]
-                #print new_moves
-                #print cur
-                #print open_lst
-
-
-                if cur[2] == player_name:
-                    child_player = copy.copy(opposite_name)
-                else:
-                    child_player = copy.copy(player_name)
-
-                new_children = self.generate_next_board(cur[2], new_moves, cur[1])
-                #for children in new_children:
-                #    children.display_board()
-                #exit()
-                child_level = cur_level[1]+1
-
-                for new_child in new_children:
-                    if new_child not in open_lst or new_child not in closed:
-                        print "if 1"
-                        open_lst.append((self.heuristic(cur[2],new_child,child_level), new_child, child_player))
-                        state_level.append((self.heuristic(cur[2],new_child,child_level),child_level))
-
-                    elif new_child in open_lst:
-                        print "if 2"
-                        open_index = open_lst.index(new_child)
-                        old_level = state_level[open_index]
-                        if child_level < old_level[1]:
-                            open_lst[open_index] = ((self.heuristic(cur[2],new_child,child_level),new_child,child_player))
-                            state_level[open_index] = ((self.heuristic(cur[2],new_child,child_level),child_level))
-
-                    elif new_child in closed:
-                        print "if 3"
-                        closed_index = closed.index(new_child)
-                        old_level = state_level[closed_index]
-                        if child_level < old_level[1]:
-                            closed.pop(closed_index)
-                            open_lst.append((self.heuristic([cur[2]],new_child,child_level),new_child,child_player))
-                            state_level.append((self.heuristic(cur[2],new_child,child_level),child_level))
-
-                    closed.append(cur)
-
-                    open_lst.sort(reverse = True)
-                    state_level.sort(reverse = True)
-
-
-        return move
-
-
-
-    def simple_best_first(self, player_name):
+    def best_first(self, player_name):
         temp_board = copy.deepcopy(self)
 
         if player_name == "B":
@@ -630,10 +534,12 @@ class Othello:
 
         scores = self.get_scores(player_name,next_boards,1)
 
-        next_move_idx = scores.index(min(scores))
+        next_move_idx = scores.index(max(scores))
         move = next_moves[next_move_idx]
 
         return move
+
+
 
 # end of AI code
 ##################################################################################################
@@ -644,8 +550,7 @@ def main():
 
     game.display_board()
 
-    game.best_first("B")
-    exit()
+
 
 
     change_board = raw_input("Would you like to change board config (y/n): " )
@@ -661,92 +566,96 @@ def main():
 
 
     if player_roles == "W":
-        for i in range(30):
-            print "AI: I am about to make a move"
-            approve = raw_input("P do you approve (y/n)? ")
-            while approve not in ["y","n"]:
-                approve = raw_input("y/n: ")
+        for i in range(15):
+            legal_movesB = game.generate_next_moves("B")
+            if legal_movesB != []:
+                print "AI: I am about to make a move"
+                approve = raw_input("P do you approve (y/n)? ")
+                while approve not in ["y","n"]:
+                    approve = raw_input("y/n: ")
 
-            old_board_config = copy.deepcopy(game.board)
-            old_score = copy.deepcopy(game.score)
+                old_board_config = copy.deepcopy(game.board)
+                old_score = copy.deepcopy(game.score)
 
-            start = time.time()
-            next_move = game.simple_best_first("B")
-            end = time.time()
-            AI_letter = VALID_COLUMN[next_move[1]-1]
-            AI_number = next_move[0]
-            print "AI: I would like to move to " + AI_letter + str(AI_number)
-            print "Time AI took : " + str(end - start) + " s"
+                start = time.time()
+                next_move = game.best_first("B")
+                end = time.time()
+                AI_letter = VALID_COLUMN[next_move[1]-1]
+                AI_number = next_move[0]
+                print "AI: I would like to move to " + AI_letter + str(AI_number)
+                print "Time AI took : " + str(end - start) + " s"
 
-            if end-start > 10:
-                print "AI took too long game over, player wins"
-                exit()
+                if end-start > 10:
+                    print "AI took too long game over, player wins"
+                    exit()
 
 
-            b_moves = game.player_turn("B",old_board_config,old_score)
+                b_moves = game.player_turn("B",old_board_config,old_score)
 
-            if b_moves == 1:
+            else:
                 print "AI: i cannot make a move :("
 
             game.display_board()
 
-            old_board_config = copy.deepcopy(game.board)
-            old_score = copy.deepcopy(game.score)
-            print "P it is now your turn to make a move"
-            w_moves = game.player_turn("W",old_board_config,old_score)
+            legal_movesW = game.generate_next_moves("W")
+            if legal_movesW != []:
+                old_board_config = copy.deepcopy(game.board)
+                old_score = copy.deepcopy(game.score)
+                print "P it is now your turn to make a move"
+                w_moves = game.player_turn("W",old_board_config,old_score)
 
-            if w_moves  == 1:
+            else:
                 print "player cannot make a move"
 
-            if b_moves == 1 and w_moves == 1:
+            if legal_movesB == [] and legal_movesW == []:
                 print "no more possible moves, game over"
                 break
 
             game.display_board()
     if player_roles == "B":
-        for i in range(30):
+        for i in range(15):
+            legal_movesB = game.generate_next_moves("B")
+                if legal_movesB != []:
+                old_board_config = copy.deepcopy(game.board)
+                old_score = copy.deepcopy(game.score)
+                print "P it is now your turn to make a move"
+                b_moves = game.player_turn("B",old_board_config,old_score)
 
-            old_board_config = copy.deepcopy(game.board)
-            old_score = copy.deepcopy(game.score)
-            print "P it is now your turn to make a move"
-            b_moves = game.player_turn("B",old_board_config,old_score)
-
-            if b_moves  == 1:
+            else:
                 print "player cannot make a move"
 
             game.display_board()
 
-            print "AI: I am about to make a move"
-            approve = raw_input("P do you approve (y/n)? ")
-            while approve not in ["y","n"]:
-                approve = raw_input("y/n: ")
+            legal_movesW = game.generate_next_moves("W")
+            if legal_movesW != []:
+                print "AI: I am about to make a move"
+                approve = raw_input("P do you approve (y/n)? ")
+                while approve not in ["y","n"]:
+                    approve = raw_input("y/n: ")
 
-            old_board_config = copy.deepcopy(game.board)
-            old_score = copy.deepcopy(game.score)
+                old_board_config = copy.deepcopy(game.board)
+                old_score = copy.deepcopy(game.score)
 
-            start = time.time()
-            next_move = game.simple_best_first("W")
-            end = time.time()
-            AI_letter = VALID_COLUMN[next_move[1]-1]
-            AI_number = next_move[0]
-            print "AI: I would like to move to " + AI_letter + str(AI_number)
-            print "Time AI took : " + str(end - start) + " s"
+                start = time.time()
+                next_move = game.best_first("W")
+                end = time.time()
+                AI_letter = VALID_COLUMN[next_move[1]-1]
+                AI_number = next_move[0]
+                print "AI: I would like to move to " + AI_letter + str(AI_number)
+                print "Time AI took : " + str(end - start) + " s"
 
-            if end-start > 10:
-                print "AI took too long game over, player wins"
-                exit()
+                if end-start > 10:
+                    print "AI took too long game over, player wins"
+                    exit()
 
 
-            w_moves = game.player_turn("W",old_board_config,old_score)
+                w_moves = game.player_turn("W",old_board_config,old_score)
 
-            if w_moves == 1:
+            else:
                 print "AI: i cannot make a move :("
 
-            game.display_board()
 
-
-
-            if b_moves == 1 and w_moves == 1:
+            if legal_movesB == [] and legal_movesW == []:
                 print "no more possible moves, game over"
                 break
 
